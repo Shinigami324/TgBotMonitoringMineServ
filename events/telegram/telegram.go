@@ -12,7 +12,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-func DoCmd(update tgbotapi.Update, bot *tgbotapi.BotAPI) (err error) {
+func DoCmd(update tgbotapi.Update, bot *tgbotapi.BotAPI, onlineChan chan int) (err error) {
 	defer func() { err = er.WrapIferr("Ошибка в выполнение команд: ", err) }()
 
 	msgArr := strings.Fields(update.Message.Text)
@@ -24,15 +24,12 @@ func DoCmd(update tgbotapi.Update, bot *tgbotapi.BotAPI) (err error) {
 		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, helpBot))
 	case commandNewGraf:
 		grafCommand(update, bot)
-	case commandOnline:
+	case CommandOnline:
 
-		online, err := getServerOnline(msgArr[1], update.Message.Chat.ID, bot)
-		if err != nil {
-			bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Проблема в получение онлайна"))
-		}
+		online := <-onlineChan
 		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Онлайн вашего сервера %s: %d", msgArr[1], online)))
 	default:
-		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Данная команда не известна"))
+		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Данная команда неизвестна"))
 	}
 
 	return nil
@@ -60,7 +57,7 @@ func grafCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI) (err error) {
 	return nil
 }
 
-func getServerOnline(ip string, chatID int64, bot *tgbotapi.BotAPI) (online int, err error) {
+func GetServerOnline(ip string, chatID int64, bot *tgbotapi.BotAPI) (online int, err error) {
 	resp, err := http.Get(fmt.Sprintf("https://api.mcsrvstat.us/3/%s", ip))
 
 	if err != nil {
@@ -86,4 +83,10 @@ func getServerOnline(ip string, chatID int64, bot *tgbotapi.BotAPI) (online int,
 	}
 
 	return serverData.Player.Online, nil
+}
+
+func GetTextComamnd(update tgbotapi.Update) (arr []string) {
+	msgArr := strings.Fields(update.Message.Text)
+
+	return msgArr
 }

@@ -4,7 +4,7 @@ const (
 	commandStart   = "/start"
 	commandHelp    = "/help"
 	commandNewGraf = "/graf"
-	commandOnline  = "/online"
+	CommandOnline  = "/online"
 )
 
 const (

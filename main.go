@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -59,11 +60,9 @@ func main() {
 				wg.Add(1)
 				go bdRedis(rdb, msgArr[1], <-onlineChan, ctx, &wg)
 
-				dataChannel := make(chan map[string]string)
-
 				wg.Add(1)
 				go func() {
-					defer close(dataChannel)
+					defer wg.Done()
 
 					data, err := getRedisServerData(rdb, msgArr[1], ctx)
 
@@ -71,26 +70,19 @@ func main() {
 						fmt.Printf("Ошибка в извлечение данных: %s", err)
 					}
 
-					dataChannel <- data
-				}()
-
-				wg.Add(1)
-
-				go func() {
-
-					dataParse := <-dataChannel
-
-					online, onlineExists := dataParse["online_players"]
-					data, dataExists := dataParse["date"]
-
-					if !onlineExists {
-						fmt.Print("ключ online_players отсутствует в данных")
-					}
-					if !dataExists {
-						fmt.Print("ключ date отсутствует в данных")
+					if len(data) == 0 {
+						bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Нет данных"))
+						return
 					}
 
-					bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Текущая дата мониторинга сервера: %s\n Текущий онлайн сервера %s", data, online)))
+					var sb strings.Builder
+
+					for time, online := range data {
+						sb.WriteString(fmt.Sprintf("Дата: %s, Онлайн: %s\n", time, online))
+					}
+
+					bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, sb.String()))
+
 				}()
 			}
 
@@ -114,16 +106,14 @@ func onlineServerFlow(update tgbotapi.Update, bot *tgbotapi.BotAPI, msgArr []str
 
 func bdRedis(rdb *redis.Client, serverName string, onlinePlayers int, ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	currentTime := time.Now().Format("02-01-2006")
+	currentTime := time.Now().Format("02-01-2006 15:04")
 
 	hashKey := serverName
 
-	fieldValues := map[string]interface{}{
-		"date":           currentTime,
-		"online_players": onlinePlayers,
-	}
+	field := currentTime
+	value := fmt.Sprintf("%d", onlinePlayers)
 
-	err := rdb.HMSet(ctx, hashKey, fieldValues).Err()
+	err := rdb.HSet(ctx, hashKey, field, value).Err()
 
 	if err != nil {
 		log.Printf("Ошибка при добавление данных в Redis: %s", err)

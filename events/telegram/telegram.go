@@ -24,10 +24,10 @@ func DoCmd(update tgbotapi.Update, bot *tgbotapi.BotAPI, onlineChan chan int) (e
 		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, helpBot))
 	case commandNewGraf:
 		grafCommand(update, bot)
-	case CommandOnline:
+	// case CommandOnline:
 
-		online := <-onlineChan
-		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Онлайн вашего сервера %s: %d", msgArr[1], online)))
+	// 	online := <-onlineChan
+	// 	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Онлайн вашего сервера %s: %d", msgArr[1], online)))
 	default:
 		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Данная команда неизвестна"))
 	}
